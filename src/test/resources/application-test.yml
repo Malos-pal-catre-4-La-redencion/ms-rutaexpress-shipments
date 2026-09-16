@@ -1,0 +1,11 @@
+# Configuración solo para tests: H2 en memoria, no necesita Neon ni red.
+spring:
+  datasource:
+    url: jdbc:h2:mem:shipments-test;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
