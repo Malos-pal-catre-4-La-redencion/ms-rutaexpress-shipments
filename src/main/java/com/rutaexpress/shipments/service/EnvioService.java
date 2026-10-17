@@ -2,6 +2,7 @@ package com.rutaexpress.shipments.service;
 
 import com.rutaexpress.shipments.exception.EnvioNoEncontradoException;
 import com.rutaexpress.shipments.exception.TransicionInvalidaException;
+import com.rutaexpress.shipments.messaging.EnvioMensajesPublisher;
 import com.rutaexpress.shipments.model.Envio;
 import com.rutaexpress.shipments.model.EstadoEnvio;
 import com.rutaexpress.shipments.repository.EnvioRepository;
@@ -15,15 +16,27 @@ import java.util.UUID;
 public class EnvioService {
 
     private final EnvioRepository repository;
+    private final EnvioMensajesPublisher publisher;
 
-    public EnvioService(EnvioRepository repository) {
+    public EnvioService(EnvioRepository repository, EnvioMensajesPublisher publisher) {
         this.repository = repository;
+        this.publisher = publisher;
     }
 
+    /**
+     * Guarda el envío y publica el comando para catalog y el evento de creación.
+     * Responde sin esperar el procesamiento asíncrono. Si una regla falla
+     * (datos inválidos, transición inválida) no se publica ningún mensaje.
+     */
     public Envio crear(CrearEnvioRequest request) {
         String trackingCode = generarTrackingCode();
-        Envio envio = new Envio(trackingCode, request.remitente(), request.destinatario(), request.direccionDestino());
-        return repository.save(envio);
+        Envio envio = new Envio(trackingCode, request.remitente(), request.destinatario(),
+                request.direccionDestino(), request.pesoKg());
+        Envio guardado = repository.save(envio);
+
+        publisher.publicarComandoAsignarVehiculo(guardado);
+        publisher.publicarEnvioCreado(guardado);
+        return guardado;
     }
 
     public List<Envio> listarTodos() {
@@ -43,7 +56,10 @@ public class EnvioService {
         }
 
         envio.cambiarEstado(nuevoEstado);
-        return repository.save(envio);
+        Envio guardado = repository.save(envio);
+
+        publisher.publicarEstadoCambiado(guardado);
+        return guardado;
     }
 
     private String generarTrackingCode() {

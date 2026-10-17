@@ -3,6 +3,7 @@ package com.rutaexpress.shipments.web.dto;
 import com.rutaexpress.shipments.model.Envio;
 import com.rutaexpress.shipments.model.EstadoEnvio;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 public record EnvioResponse(
@@ -11,6 +12,7 @@ public record EnvioResponse(
         String remitente,
         String destinatario,
         String direccionDestino,
+        BigDecimal pesoKg,
         EstadoEnvio estado,
         Instant creadoEn,
         Instant actualizadoEn
@@ -22,6 +24,7 @@ public record EnvioResponse(
                 envio.getRemitente(),
                 envio.getDestinatario(),
                 envio.getDireccionDestino(),
+                envio.getPesoKg(),
                 envio.getEstado(),
                 envio.getCreadoEn(),
                 envio.getActualizadoEn()

@@ -4,11 +4,12 @@
 #   SPRING_DATASOURCE_USERNAME  usuario de Neon
 #   SPRING_DATASOURCE_PASSWORD  password de Neon
 #   SERVER_PORT                 puerto de este servicio (default 8082)
+#   RABBITMQ_HOST / RABBITMQ_PORT / RABBITMQ_USER / RABBITMQ_PASSWORD
+#                               conexión al clúster RabbitMQ (default localhost:5672)
 # No hay defaults para la base de datos a propósito: sin credenciales reales
 # no hay a dónde conectarse. Usa el perfil "local" (ver application-local.yml.example)
 # para no tener que exportar variables cada vez que corres el proyecto.
 # ============================================================================
-
 server:
   port: ${SERVER_PORT:8082}
 
@@ -26,6 +27,60 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:rutaexpress}
+    password: ${RABBITMQ_PASSWORD:}
+    listener:
+      simple:
+        acknowledge-mode: manual        # ACK/NACK explícito en cada listener
+        prefetch: 10                    # QoS: máx. 10 mensajes sin confirmar por consumidor
+        default-requeue-rejected: false # un rechazo nunca vuelve a la cola: va a la DLQ
+
+# ----------------------------------------------------------------------------
+# MENSAJERÍA — único lugar donde se definen nombres de exchanges, colas,
+# routing keys y políticas de retención (ver config/RabbitTopologyConfig).
+# Los nombres y argumentos de "comandos" deben ser idénticos en catalog: la
+# cola se declara en ambos servicios para que ningún comando se pierda si
+# shipments arranca primero.
+# ----------------------------------------------------------------------------
+rutaexpress:
+  mensajeria:
+    exchanges:
+      comandos: rutaexpress.commands    # direct
+      eventos: rutaexpress.events       # topic
+      dlx: rutaexpress.dlx              # direct, destino de los mensajes muertos
+    comandos:                           # cola 1: comandos (la consume catalog)
+      cola: q.envio.comandos
+      routing-key: envio.asignar-vehiculo
+      dlq: q.envio.comandos.dlq
+      dlq-routing-key: envio.comandos.dlq
+      ttl-ms: 300000
+      max-length: 10000
+    notificaciones:                     # cola 2: notificaciones (la consume shipments)
+      cola: q.notificaciones
+      routing-key: "envio.#"            # todos los eventos que empiezan con "envio."
+      dlq: q.notificaciones.dlq
+      dlq-routing-key: notificaciones.dlq
+      ttl-ms: 3600000                   # una notificación de más de 1 h ya no sirve
+      max-length: 10000
+    auditoria:                          # cola 3: auditoría (la consume shipments)
+      cola: q.auditoria
+      routing-key: "#"                  # absolutamente todos los eventos
+      dlq: q.auditoria.dlq
+      dlq-routing-key: auditoria.dlq
+      ttl-ms: 86400000                  # 24 h
+      max-length: 50000
+    eventos:
+      envio-creado: envio.creado
+      envio-estado-cambiado: envio.estado.cambiado
+    reintentos:
+      max-intentos: 3                   # intentos totales ante un error recuperable
+      espera-ms: 500                    # espera base entre intentos (crece linealmente)
+    dlq:
+      ttl-ms: 604800000                 # las DLQ conservan 7 días
+      max-length: 10000                 # y nunca más de 10.000 mensajes
 
 logging:
   level:
