@@ -13,6 +13,7 @@ public record EnvioResponse(
         String destinatario,
         String direccionDestino,
         BigDecimal pesoKg,
+        String creadoPor,
         EstadoEnvio estado,
         Instant creadoEn,
         Instant actualizadoEn
@@ -25,6 +26,7 @@ public record EnvioResponse(
                 envio.getDestinatario(),
                 envio.getDireccionDestino(),
                 envio.getPesoKg(),
+                envio.getCreadoPor(),
                 envio.getEstado(),
                 envio.getCreadoEn(),
                 envio.getActualizadoEn()

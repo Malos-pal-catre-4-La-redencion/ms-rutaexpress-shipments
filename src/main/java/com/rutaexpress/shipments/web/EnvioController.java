@@ -28,20 +28,32 @@ public class EnvioController {
         this.service = service;
     }
 
+    /** Cabecera con la que el BFF informa quién es el usuario autenticado (claim oid del JWT). */
+    static final String CABECERA_USUARIO = "X-Usuario-Id";
+
     @PostMapping
-    public ResponseEntity<EnvioResponse> crear(@Valid @RequestBody CrearEnvioRequest request) {
-        Envio creado = service.crear(request);
+    public ResponseEntity<EnvioResponse> crear(
+            @Valid @RequestBody CrearEnvioRequest request,
+            @RequestHeader(name = CABECERA_USUARIO, required = false) String usuarioId) {
+        Envio creado = service.crear(request, normalizar(usuarioId));
         return ResponseEntity.status(HttpStatus.CREATED).body(EnvioResponse.desde(creado));
     }
 
+    /** Sin parámetro devuelve todos los envíos; con ?creadoPor=<id> solo los de ese usuario. */
     @GetMapping
-    public List<EnvioResponse> listar() {
-        return service.listarTodos().stream().map(EnvioResponse::desde).toList();
+    public List<EnvioResponse> listar(@RequestParam(name = "creadoPor", required = false) String creadoPor) {
+        String filtro = normalizar(creadoPor);
+        List<Envio> envios = filtro == null ? service.listarTodos() : service.listarPorCreador(filtro);
+        return envios.stream().map(EnvioResponse::desde).toList();
     }
 
     @GetMapping("/{id}")
     public EnvioResponse obtener(@PathVariable Long id) {
         return EnvioResponse.desde(service.buscarPorId(id));
+    }
+
+    private static String normalizar(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
     @PatchMapping("/{id}/estado")

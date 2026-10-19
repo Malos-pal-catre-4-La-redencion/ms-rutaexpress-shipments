@@ -29,6 +29,11 @@ public class Envio {
     @Column(name = "peso_kg", precision = 10, scale = 2)
     private BigDecimal pesoKg;
 
+    // Identificador (claim "oid" de Entra ID) del usuario que creó el envío. Lo informa el BFF.
+    // Nullable: los envíos anteriores a este campo no tienen dueño y solo los ven Admin y Despachador.
+    @Column(name = "creado_por", length = 100)
+    private String creadoPor;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false, length = 20)
     private EstadoEnvio estado;
@@ -44,6 +49,12 @@ public class Envio {
     }
 
     public Envio(String trackingCode, String remitente, String destinatario, String direccionDestino, BigDecimal pesoKg) {
+        this(trackingCode, remitente, destinatario, direccionDestino, pesoKg, null);
+    }
+
+    public Envio(String trackingCode, String remitente, String destinatario, String direccionDestino,
+                 BigDecimal pesoKg, String creadoPor) {
+        this.creadoPor = creadoPor;
         this.trackingCode = trackingCode;
         this.remitente = remitente;
         this.destinatario = destinatario;
@@ -81,6 +92,10 @@ public class Envio {
 
     public BigDecimal getPesoKg() {
         return pesoKg;
+    }
+
+    public String getCreadoPor() {
+        return creadoPor;
     }
 
     public EstadoEnvio getEstado() {

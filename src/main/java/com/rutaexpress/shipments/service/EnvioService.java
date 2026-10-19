@@ -28,10 +28,10 @@ public class EnvioService {
      * Responde sin esperar el procesamiento asíncrono. Si una regla falla
      * (datos inválidos, transición inválida) no se publica ningún mensaje.
      */
-    public Envio crear(CrearEnvioRequest request) {
+    public Envio crear(CrearEnvioRequest request, String creadoPor) {
         String trackingCode = generarTrackingCode();
         Envio envio = new Envio(trackingCode, request.remitente(), request.destinatario(),
-                request.direccionDestino(), request.pesoKg());
+                request.direccionDestino(), request.pesoKg(), creadoPor);
         Envio guardado = repository.save(envio);
 
         publisher.publicarComandoAsignarVehiculo(guardado);
@@ -41,6 +41,10 @@ public class EnvioService {
 
     public List<Envio> listarTodos() {
         return repository.findAll();
+    }
+
+    public List<Envio> listarPorCreador(String creadoPor) {
+        return repository.findByCreadoPor(creadoPor);
     }
 
     public Envio buscarPorId(Long id) {

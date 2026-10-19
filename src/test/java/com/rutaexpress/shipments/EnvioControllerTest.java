@@ -17,7 +17,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.UUID;
 
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -138,6 +143,76 @@ class EnvioControllerTest {
                 .andExpect(jsonPath("$.estado").value("ACEPTADO"));
 
         verify(publisher).publicarEstadoCambiado(any(Envio.class));
+    }
+
+    private void crearEnvioDe(String usuarioId) throws Exception {
+        CrearEnvioRequest crear = new CrearEnvioRequest("Tienda RutaExpress", "Cliente de prueba",
+                "Calle Falsa 456", new BigDecimal("10"));
+
+        mockMvc.perform(post("/envios")
+                        .header("X-Usuario-Id", usuarioId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(crear)))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void guardaQuienCreoElEnvioSegunLaCabeceraQueInformaElBff() throws Exception {
+        CrearEnvioRequest request = new CrearEnvioRequest("Tienda RutaExpress", "Ana Soto",
+                "Calle Falsa 456", new BigDecimal("30"));
+
+        mockMvc.perform(post("/envios")
+                        .header("X-Usuario-Id", "oid-ana")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.creadoPor").value("oid-ana"));
+    }
+
+    @Test
+    void sinCabeceraElEnvioQuedaSinDueno() throws Exception {
+        CrearEnvioRequest request = new CrearEnvioRequest("Tienda RutaExpress", "Ana Soto",
+                "Calle Falsa 456", new BigDecimal("30"));
+
+        mockMvc.perform(post("/envios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.creadoPor").value(nullValue()));
+    }
+
+    @Test
+    void listarConCreadoPorDevuelveSoloLosEnviosDeEseUsuario() throws Exception {
+        String ana = "oid-ana-" + UUID.randomUUID();
+        String luis = "oid-luis-" + UUID.randomUUID();
+        crearEnvioDe(ana);
+        crearEnvioDe(ana);
+        crearEnvioDe(luis);
+
+        mockMvc.perform(get("/envios").param("creadoPor", ana))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[*].creadoPor", everyItem(is(ana))));
+    }
+
+    @Test
+    void listarSinFiltroDevuelveEnviosDeTodosLosUsuarios() throws Exception {
+        String ana = "oid-ana-" + UUID.randomUUID();
+        String luis = "oid-luis-" + UUID.randomUUID();
+        crearEnvioDe(ana);
+        crearEnvioDe(luis);
+
+        mockMvc.perform(get("/envios"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.creadoPor == '" + ana + "')]", hasSize(1)))
+                .andExpect(jsonPath("$[?(@.creadoPor == '" + luis + "')]", hasSize(1)));
+    }
+
+    @Test
+    void creadoPorDeUnUsuarioSinEnviosDevuelveListaVacia() throws Exception {
+        mockMvc.perform(get("/envios").param("creadoPor", "oid-sin-envios-" + UUID.randomUUID()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
