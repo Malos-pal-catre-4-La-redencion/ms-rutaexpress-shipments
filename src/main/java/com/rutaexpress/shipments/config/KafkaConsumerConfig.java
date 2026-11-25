@@ -36,18 +36,19 @@ public class KafkaConsumerConfig {
 
     @Bean
     public ConsumerFactory<String, Object> kafkaConsumerFactory(KafkaTopicsProperties props) {
-        Map<String, Object> config = Map.of(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
-                ConsumerConfig.GROUP_ID_CONFIG, props.consumerGroup(),
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class,
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class,
-                ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class,
-                ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class,
-                JsonDeserializer.TRUSTED_PACKAGES, "com.rutaexpress.shipments.messaging.kafka.dto",
-                JsonDeserializer.VALUE_DEFAULT_TYPE, "com.rutaexpress.shipments.messaging.kafka.dto.VehiculoEventoKafka",
-                JsonDeserializer.USE_TYPE_INFO_HEADERS, false,
-                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest",
-                ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false
+        // Map.of() solo admite hasta 10 pares clave-valor; con 11 hay que usar ofEntries().
+        Map<String, Object> config = Map.ofEntries(
+                Map.entry(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers),
+                Map.entry(ConsumerConfig.GROUP_ID_CONFIG, props.consumerGroup()),
+                Map.entry(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class),
+                Map.entry(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class),
+                Map.entry(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class),
+                Map.entry(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class),
+                Map.entry(JsonDeserializer.TRUSTED_PACKAGES, "com.rutaexpress.shipments.messaging.kafka.dto"),
+                Map.entry(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.rutaexpress.shipments.messaging.kafka.dto.VehiculoEventoKafka"),
+                Map.entry(JsonDeserializer.USE_TYPE_INFO_HEADERS, false),
+                Map.entry(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"),
+                Map.entry(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false)
         );
         return new DefaultKafkaConsumerFactory<>(config);
     }
