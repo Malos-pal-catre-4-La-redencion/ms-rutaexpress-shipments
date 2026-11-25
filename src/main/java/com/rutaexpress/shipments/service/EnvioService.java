@@ -3,6 +3,7 @@ package com.rutaexpress.shipments.service;
 import com.rutaexpress.shipments.exception.EnvioNoEncontradoException;
 import com.rutaexpress.shipments.exception.TransicionInvalidaException;
 import com.rutaexpress.shipments.messaging.EnvioMensajesPublisher;
+import com.rutaexpress.shipments.messaging.kafka.EnvioEventoKafkaPublisher;
 import com.rutaexpress.shipments.model.Envio;
 import com.rutaexpress.shipments.model.EstadoEnvio;
 import com.rutaexpress.shipments.repository.EnvioRepository;
@@ -17,10 +18,13 @@ public class EnvioService {
 
     private final EnvioRepository repository;
     private final EnvioMensajesPublisher publisher;
+    private final EnvioEventoKafkaPublisher kafkaPublisher;
 
-    public EnvioService(EnvioRepository repository, EnvioMensajesPublisher publisher) {
+    public EnvioService(EnvioRepository repository, EnvioMensajesPublisher publisher,
+                        EnvioEventoKafkaPublisher kafkaPublisher) {
         this.repository = repository;
         this.publisher = publisher;
+        this.kafkaPublisher = kafkaPublisher;
     }
 
     /**
@@ -36,6 +40,7 @@ public class EnvioService {
 
         publisher.publicarComandoAsignarVehiculo(guardado);
         publisher.publicarEnvioCreado(guardado);
+        kafkaPublisher.publicar(guardado); // analítica/streaming; complementa lo anterior, no lo reemplaza
         return guardado;
     }
 
@@ -63,6 +68,7 @@ public class EnvioService {
         Envio guardado = repository.save(envio);
 
         publisher.publicarEstadoCambiado(guardado);
+        kafkaPublisher.publicar(guardado); // analítica/streaming; complementa lo anterior, no lo reemplaza
         return guardado;
     }
 

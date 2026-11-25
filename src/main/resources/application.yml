@@ -6,6 +6,7 @@
 #   SERVER_PORT                 puerto de este servicio (default 8082)
 #   RABBITMQ_HOST / RABBITMQ_PORT / RABBITMQ_USER / RABBITMQ_PASSWORD
 #                               conexión al clúster RabbitMQ (default localhost:5672)
+#   KAFKA_BOOTSTRAP_SERVERS     brokers Kafka (default localhost:9092,localhost:9093,localhost:9094)
 # No hay defaults para la base de datos a propósito: sin credenciales reales
 # no hay a dónde conectarse. Usa el perfil "local" (ver application-local.yml.example)
 # para no tener que exportar variables cada vez que corres el proyecto.
@@ -37,6 +38,8 @@ spring:
         acknowledge-mode: manual        # ACK/NACK explícito en cada listener
         prefetch: 10                    # QoS: máx. 10 mensajes sin confirmar por consumidor
         default-requeue-rejected: false # un rechazo nunca vuelve a la cola: va a la DLQ
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093,localhost:9094}
 
 # ----------------------------------------------------------------------------
 # MENSAJERÍA — único lugar donde se definen nombres de exchanges, colas,
@@ -81,6 +84,16 @@ rutaexpress:
     dlq:
       ttl-ms: 604800000                 # las DLQ conservan 7 días
       max-length: 10000                 # y nunca más de 10.000 mensajes
+
+  # --------------------------------------------------------------------------
+  # KAFKA — complementa la mensajería anterior (RabbitMQ), para streaming y
+  # analítica. Los nombres de topics deben ser idénticos en catalog.
+  # --------------------------------------------------------------------------
+  kafka:
+    topics:
+      eventos-vehiculos: rutaexpress.eventos.vehiculos   # productor: catalog    · consumidor: shipments
+      eventos-envios: rutaexpress.eventos.envios         # productor: shipments  · consumidor: catalog
+    consumer-group: shipments-analitica-vehiculos        # grupo propio al consumir eventos-vehiculos
 
 logging:
   level:

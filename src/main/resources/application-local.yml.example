@@ -10,3 +10,6 @@ spring:
     port: 5672
     username: rutaexpress           # el RABBITMQ_DEFAULT_USER de docker/.env
     password: LA-CLAVE-DE-docker-.env   # el RABBITMQ_DEFAULT_PASS de docker/.env
+  kafka:
+    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+    # en EC2: las IPs/puertos privados de los 3 brokers
